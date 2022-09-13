@@ -144,3 +144,15 @@ path = "examples/z_ping.rs"
 [[example]]
 name = "z_pong"
 path = "examples/z_pong.rs"
+
+[[example]]
+name = "dragon_pub"
+path = "examples/dragonquotes/dragon_pub.rs"
+
+[[example]]
+name = "dragon_sub"
+path = "examples/dragonquotes/dragon_sub.rs"
+
+[[example]]
+name = "dragon_queryable"
+path = "examples/dragonquotes/dragon_queryable.rs"
