@@ -11,9 +11,9 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-use async_std::task::sleep;
 use futures::prelude::*;
 use futures::select;
+use log::debug;
 use rand::{thread_rng, Rng};
 use std::convert::TryFrom;
 use std::fs::File;
@@ -21,7 +21,6 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::num::ParseIntError;
 use std::path::Path;
-use std::time::Duration;
 use zenoh::config::Config;
 use zenoh::prelude::r#async::AsyncResolve;
 use zenoh::prelude::*;
@@ -66,18 +65,29 @@ async fn main() {
                 let query = query.unwrap();
                 println!(">> [Queryable ] Received Query '{}'", query.selector());
                 if query.key_expr().is_wild() {
-                    let all_quotes = get_all_quotes(&quotes);
-                    query.reply(Ok(Sample::new(get_quote_key_expr.clone(), all_quotes))).res().await.unwrap();
+                    for quote in &quotes {
+                        query.reply(Ok(Sample::new(get_quote_key_expr.clone(), quote.clone()))).res().await.unwrap();
+                    }
                 } else {
-                    let quote = get_quote(&quotes, get_quote_number(query.key_expr()).unwrap());
-                    query.reply(Ok(Sample::new(get_quote_key_expr.clone(), quote))).res().await.unwrap();
+                    let quote_number = match get_quote_number(query.key_expr()) {
+                        Ok(number) => number,
+                        Err(err) => {
+                            debug!("Invalid quote number: {}", err.to_string());
+                            return;
+                        },
+                    };
+    
+                    let quote = quotes.get(quote_number);
+                    match quote {
+                        Some(quote) => query.reply(Ok(Sample::new(get_quote_key_expr.clone(), quote.clone()))).res().await.unwrap(),
+                        None => debug!("Index out of bounds: {quote_number}"),
+                    }
                 }
             },
 
             _ = stdin.read_exact(&mut input).fuse() => {
                 match input[0] {
                     b'q' => break,
-                    0 => sleep(Duration::from_secs(1)).await,
                     _ => (),
                 }
             }
@@ -97,14 +107,6 @@ fn get_random_quote(quotes: &Vec<String>) -> String {
     let mut rng = thread_rng();
     let n = rng.gen_range(0..quotes.len());
     quotes[n].clone()
-}
-
-fn get_all_quotes(quotes: &Vec<String>) -> String {
-    quotes.join("\n")
-}
-
-fn get_quote(quotes: &Vec<String>, number: usize) -> String {
-    quotes[number].clone()
 }
 
 fn quotes_from_file(input_path: impl AsRef<Path>) -> Vec<String> {

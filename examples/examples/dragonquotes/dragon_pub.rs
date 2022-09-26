@@ -12,16 +12,16 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use async_std::task::sleep;
-use std::io::{BufRead, BufReader, Error};
 use std::fs::File;
+use std::io::{BufRead, BufReader, Error};
 use std::path::Path;
+use std::str;
 use std::time::Duration;
 use zenoh::config::Config;
 use zenoh::prelude::r#async::AsyncResolve;
-use std::str;
 
-const ENDPOINT : &str = "dragons";
-const QUOTES_INPUT_PATH : &str = "quotes.txt";
+const ENDPOINT: &str = "dragons";
+const QUOTES_INPUT_PATH: &str = "quotes.txt";
 
 #[async_std::main]
 async fn main() -> Result<(), Error> {
@@ -33,8 +33,8 @@ async fn main() -> Result<(), Error> {
 
     println!("Declaring a publisher for '{}'...", ENDPOINT);
     let publisher = session.declare_publisher(ENDPOINT).res().await.unwrap();
-    
-    let mut idx : i32 = 0;
+
+    let mut idx: i32 = 0;
     let quotes = quotes_from_file(QUOTES_INPUT_PATH);
     for quote in quotes.iter().cycle() {
         sleep(Duration::from_secs(1)).await;

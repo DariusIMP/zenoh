@@ -18,7 +18,7 @@ use std::time::Duration;
 use zenoh::config::Config;
 use zenoh::prelude::r#async::AsyncResolve;
 
-const ENDPOINT : &str = "dragons";
+const ENDPOINT: &str = "dragons";
 
 #[async_std::main]
 async fn main() {
