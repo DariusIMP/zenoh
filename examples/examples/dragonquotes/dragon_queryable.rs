@@ -28,6 +28,7 @@ use zenoh::prelude::*;
 const QUOTES_INPUT_PATH: &str = "quotes.txt";
 
 const GET_ANY_PATH: &str = "zenoh/quote/any";
+const GET_SOME_PATH: &str = "zenoh/quote/id";
 const GET_QUOTE: &str = "zenoh/quote/id/*";
 
 #[async_std::main]
@@ -36,7 +37,7 @@ async fn main() {
     env_logger::init();
 
     let get_any_key_expr = KeyExpr::try_from(GET_ANY_PATH).unwrap();
-    let get_quote_key_expr = KeyExpr::try_from(GET_QUOTE).unwrap();
+    let get_some_quote_key_expr = KeyExpr::try_from(GET_SOME_PATH).unwrap();
 
     let quotes: Vec<String> = quotes_from_file(QUOTES_INPUT_PATH);
 
@@ -64,22 +65,25 @@ async fn main() {
             query = get_quote_queryable.recv_async() => {
                 let query = query.unwrap();
                 println!(">> [Queryable ] Received Query '{}'", query.selector());
-                if query.key_expr().is_wild() {
+                let received_key_expr = query.key_expr();
+                if received_key_expr.is_wild() {
+                    let mut number : u32 = 0;
                     for quote in &quotes {
-                        query.reply(Ok(Sample::new(get_quote_key_expr.clone(), quote.clone()))).res().await.unwrap();
+                        query.reply(Ok(Sample::new(get_some_quote_key_expr.join(&number.to_string()).unwrap(), quote.to_owned()))).res().await.unwrap();
+                        number += 1;
                     }
                 } else {
-                    let quote_number = match get_quote_number(query.key_expr()) {
+                    let quote_number = match get_quote_number(received_key_expr) {
                         Ok(number) => number,
                         Err(err) => {
                             debug!("Invalid quote number: {}", err.to_string());
                             return;
                         },
                     };
-    
+
                     let quote = quotes.get(quote_number);
                     match quote {
-                        Some(quote) => query.reply(Ok(Sample::new(get_quote_key_expr.clone(), quote.clone()))).res().await.unwrap(),
+                        Some(quote) => query.reply(Ok(Sample::new(received_key_expr.to_owned(), quote.to_owned()))).res().await.unwrap(),
                         None => debug!("Index out of bounds: {quote_number}"),
                     }
                 }
