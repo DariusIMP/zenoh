@@ -23,6 +23,7 @@ use async_std::sync::Mutex as AsyncMutex;
 use async_std::task;
 use async_std::task::JoinHandle;
 use async_trait::async_trait;
+use tokio_rustls::rustls::server::AllowAnyAuthenticatedClient;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::{fmt, vec};
@@ -173,7 +174,7 @@ impl LinkUnicastTrait for LinkUnicastTls {
             .await
             .map(|_| ())
             .map_err(|e| {
-                log::trace!("Read error on TLS link {}: {}", self, e);
+            log::trace!("Read error on TLS link {}: {}", self, e);
                 zerror!(e)
             })?)
     }
@@ -419,11 +420,51 @@ impl LinkManagerUnicastTrait for LinkManagerUnicastTls {
                 .map(|mut certs| certs.drain(..).map(Certificate).collect())?;
 
         let sc = if client_auth {
-            // @TODO: implement Client authentication
-            bail!(
-                "Can not create a new TLS listener on {}. ClientAuth not supported.",
-                addr
-            );
+            log::debug!("XXX Client auth");
+            let mut root_cert_store = RootCertStore::empty();
+            if let Some(config) = &endpoint.config {
+                if let Some(value) = config.get(TLS_ROOT_CA_CERTIFICATE_RAW) {
+                    let bytes = value.as_bytes().to_vec();
+                    let certs = vec![bytes];
+                    let trust_anchors = certs.iter().map(|cert| {
+                        let ta = webpki::TrustAnchor::try_from_cert_der(&cert[..]).unwrap();
+                        OwnedTrustAnchor::from_subject_spki_name_constraints(
+                            ta.subject,
+                            ta.spki,
+                            ta.name_constraints,
+                        )    
+                    });
+                    root_cert_store.add_server_trust_anchors(trust_anchors.into_iter());
+                } else if let Some(filename) = config.get(TLS_ROOT_CA_CERTIFICATE_FILE) {
+                    log::debug!("XXX Loading root ca from file {filename}");
+                    let mut pem = BufReader::new(File::open(filename)?);
+                    let certs = rustls_pemfile::certs(&mut pem)?;
+                    let trust_anchors = certs.iter().map(|cert| {
+                        let ta = webpki::TrustAnchor::try_from_cert_der(&cert[..]).unwrap();
+                        OwnedTrustAnchor::from_subject_spki_name_constraints(
+                            ta.subject,
+                            ta.spki,
+                            ta.name_constraints,
+                        )    
+                    });
+                    root_cert_store.add_server_trust_anchors(trust_anchors.into_iter());
+                } else {
+                    root_cert_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
+                        |ta| {
+                            OwnedTrustAnchor::from_subject_spki_name_constraints(
+                                ta.subject,
+                                ta.spki,
+                                ta.name_constraints,
+                            )
+                        },
+                    ));
+                }
+            }
+            ServerConfig::builder()
+                .with_safe_defaults()
+                .with_client_cert_verifier(AllowAnyAuthenticatedClient::new(root_cert_store))
+                .with_single_cert(certs, keys.remove(0))
+                .map_err(|e| zerror!(e))?
         } else {
             ServerConfig::builder()
                 .with_safe_defaults()
