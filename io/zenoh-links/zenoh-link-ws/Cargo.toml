@@ -38,7 +38,7 @@ async-std = { version = "=1.12.0", default-features = false, features = [
 	"tokio1",
 ] }
 async-trait = "0.1.57"
-futures-util = { version = "0.3.24", default-features = false, features = ["sink", "std"] }
+futures-util = { version = "0.3.25", default-features = false, features = ["sink", "std"] }
 log = "0.4.17"
 tokio = { version = "1.21.2", default-features = false, features = ["io-std", "macros", "net", "rt-multi-thread", "time"] }
 tokio-tungstenite = "0.17.2"
