@@ -23,7 +23,7 @@ pub mod orchestrator;
 use super::routing;
 use super::routing::pubsub::full_reentrant_route_data;
 use super::routing::router::{LinkStateInterceptor, Router};
-use crate::config::{Config, ModeDependent, Notifier};
+use crate::config::{unwrap_or_default, Config, ModeDependent, Notifier};
 use crate::GIT_VERSION;
 pub use adminspace::AdminSpace;
 use async_std::task::JoinHandle;
@@ -74,7 +74,15 @@ impl std::ops::Deref for Runtime {
 }
 
 impl Runtime {
-    pub async fn new(config: Config, start: bool) -> ZResult<Runtime> {
+    pub async fn new(config: Config) -> ZResult<Runtime> {
+        let mut runtime = Runtime::init(config).await?;
+        match runtime.start().await {
+            Ok(()) => Ok(runtime),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub(crate) async fn init(config: Config) -> ZResult<Runtime> {
         log::debug!("Zenoh Rust API {}", GIT_VERSION);
         // Make sure to have have enough threads spawned in the async futures executor
         zasync_executor_init!();
@@ -83,80 +91,27 @@ impl Runtime {
 
         log::info!("Using PID: {}", zid);
 
-        let whatami = config.mode().unwrap_or(crate::config::WhatAmI::Peer);
-        let hlc = match whatami {
-            WhatAmI::Router => config
-                .timestamping()
-                .enabled()
-                .router()
-                .cloned()
-                .unwrap_or(true),
-            WhatAmI::Peer => config
-                .timestamping()
-                .enabled()
-                .peer()
-                .cloned()
-                .unwrap_or(false),
-            WhatAmI::Client => config
-                .timestamping()
-                .enabled()
-                .client()
-                .cloned()
-                .unwrap_or(false),
-        }
-        .then(|| Arc::new(HLCBuilder::new().with_id(uhlc::ID::from(&zid)).build()));
-        let drop_future_timestamp = config
-            .timestamping()
-            .drop_future_timestamp()
-            .unwrap_or(false);
+        let whatami = unwrap_or_default!(config.mode());
+        let hlc = (*unwrap_or_default!(config.timestamping().enabled().get(whatami)))
+            .then(|| Arc::new(HLCBuilder::new().with_id(uhlc::ID::from(&zid)).build()));
+        let drop_future_timestamp =
+            unwrap_or_default!(config.timestamping().drop_future_timestamp());
 
-        let gossip = config.scouting().gossip().enabled().unwrap_or(true);
-        let gossip_multihop = config.scouting().gossip().multihop().unwrap_or(false);
-        let autoconnect = match whatami {
-            WhatAmI::Router => {
-                if config.scouting().gossip().enabled().unwrap_or(true) {
-                    config
-                        .scouting()
-                        .gossip()
-                        .autoconnect()
-                        .router()
-                        .cloned()
-                        .unwrap_or_else(|| WhatAmIMatcher::try_from(128).unwrap())
-                } else {
-                    WhatAmIMatcher::try_from(128).unwrap()
-                }
-            }
-            WhatAmI::Peer => {
-                if config.scouting().gossip().enabled().unwrap_or(true) {
-                    config
-                        .scouting()
-                        .gossip()
-                        .autoconnect()
-                        .peer()
-                        .cloned()
-                        .unwrap_or_else(|| WhatAmIMatcher::try_from(131).unwrap())
-                } else {
-                    WhatAmIMatcher::try_from(128).unwrap()
-                }
-            }
-            _ => WhatAmIMatcher::try_from(128).unwrap(),
+        let gossip = unwrap_or_default!(config.scouting().gossip().enabled());
+        let gossip_multihop = unwrap_or_default!(config.scouting().gossip().multihop());
+        let autoconnect = if gossip {
+            *unwrap_or_default!(config.scouting().gossip().autoconnect().get(whatami))
+        } else {
+            WhatAmIMatcher::empty()
         };
 
         let router_link_state = whatami == WhatAmI::Router;
         let peer_link_state = whatami != WhatAmI::Client
-            && *config.routing().peer().mode() == Some("linkstate".to_string());
-
-        let router_peers_failover_brokering = config
-            .routing()
-            .router()
-            .peers_failover_brokering()
-            .unwrap_or(true);
-
-        let queries_default_timeout = config.queries_default_timeout().unwrap_or_else(|| {
-            zenoh_cfg_properties::config::ZN_QUERIES_DEFAULT_TIMEOUT_DEFAULT
-                .parse()
-                .unwrap()
-        });
+            && unwrap_or_default!(config.routing().peer().mode()) == *"linkstate";
+        let router_peers_failover_brokering =
+            unwrap_or_default!(config.routing().router().peers_failover_brokering());
+        let queries_default_timeout =
+            Duration::from_millis(unwrap_or_default!(config.queries_default_timeout()));
 
         let router = Arc::new(Router::new(
             zid,
@@ -164,7 +119,7 @@ impl Runtime {
             hlc.clone(),
             drop_future_timestamp,
             router_peers_failover_brokering,
-            Duration::from_millis(queries_default_timeout),
+            queries_default_timeout,
         ));
 
         let handler = Arc::new(RuntimeTransportEventHandler {
@@ -180,7 +135,7 @@ impl Runtime {
 
         let config = Notifier::new(config);
 
-        let mut runtime = Runtime {
+        let runtime = Runtime {
             state: Arc::new(RuntimeState {
                 zid,
                 whatami,
@@ -219,14 +174,7 @@ impl Runtime {
             }
         });
 
-        if start {
-            match runtime.start().await {
-                Ok(()) => Ok(runtime),
-                Err(err) => Err(err),
-            }
-        } else {
-            Ok(runtime)
-        }
+        Ok(runtime)
     }
 
     #[inline(always)]

@@ -15,16 +15,11 @@
 //! Query primitives.
 
 use crate::handlers::{locked, Callback, DefaultHandler};
-use crate::net::runtime::Runtime;
 use crate::prelude::*;
 use crate::Session;
-use crate::SessionState;
-use async_trait::async_trait;
 use std::collections::HashMap;
 use std::future::Ready;
-use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use zenoh_collections::Timed;
 use zenoh_core::zresult::ZResult;
 use zenoh_core::{AsyncResolve, Resolvable, SyncResolve};
 
@@ -89,33 +84,6 @@ pub struct Reply {
     pub replier_id: ZenohId,
 }
 
-#[derive(Clone)]
-pub(crate) struct QueryTimeout {
-    pub(crate) state: Arc<RwLock<SessionState>>,
-    pub(crate) runtime: Runtime,
-    pub(crate) qid: ZInt,
-}
-
-#[async_trait]
-impl Timed for QueryTimeout {
-    async fn run(&mut self) {
-        let mut state = zwrite!(self.state);
-        if let Some(query) = state.queries.remove(&self.qid) {
-            std::mem::drop(state);
-            log::debug!("Timout on query {}! Send error and close.", self.qid);
-            if query.reception_mode == ConsolidationMode::Latest {
-                for (_, reply) in query.replies.unwrap().into_iter() {
-                    let _ = (query.callback)(reply);
-                }
-            }
-            let _ = (query.callback)(Reply {
-                sample: Err("Timeout".into()),
-                replier_id: self.runtime.zid,
-            });
-        }
-    }
-}
-
 pub(crate) struct QueryState {
     pub(crate) nb_final: usize,
     pub(crate) selector: Selector<'static>,
@@ -154,6 +122,7 @@ pub struct GetBuilder<'a, 'b, Handler> {
     pub(crate) destination: Locality,
     pub(crate) timeout: Duration,
     pub(crate) handler: Handler,
+    pub(crate) value: Option<Value>,
 }
 
 impl<'a, 'b> GetBuilder<'a, 'b, DefaultHandler> {
@@ -185,6 +154,7 @@ impl<'a, 'b> GetBuilder<'a, 'b, DefaultHandler> {
             consolidation,
             destination,
             timeout,
+            value,
             handler: _,
         } = self;
         GetBuilder {
@@ -194,6 +164,7 @@ impl<'a, 'b> GetBuilder<'a, 'b, DefaultHandler> {
             consolidation,
             destination,
             timeout,
+            value,
             handler: callback,
         }
     }
@@ -260,6 +231,7 @@ impl<'a, 'b> GetBuilder<'a, 'b, DefaultHandler> {
             consolidation,
             destination,
             timeout,
+            value,
             handler: _,
         } = self;
         GetBuilder {
@@ -269,6 +241,7 @@ impl<'a, 'b> GetBuilder<'a, 'b, DefaultHandler> {
             consolidation,
             destination,
             timeout,
+            value,
             handler,
         }
     }
@@ -304,13 +277,24 @@ impl<'a, 'b, Handler> GetBuilder<'a, 'b, Handler> {
         self
     }
 
+    /// Set query value.
+    #[zenoh_core::unstable]
+    #[inline]
+    pub fn with_value<IntoValue>(mut self, value: IntoValue) -> Self
+    where
+        IntoValue: Into<Value>,
+    {
+        self.value = Some(value.into());
+        self
+    }
+
     /// By default, `get` guarantees that it will only receive replies whose key expressions intersect
     /// with the queried key expression.
     ///
     /// If allowed to through `accept_replies(ReplyKeyExpr::Any)`, queryables may also reply on key
     /// expressions that don't intersect with the query's.
     #[zenoh_core::unstable]
-    pub fn accept_replies(self, value: ReplyKeyExpr) -> Self {
+    pub fn accept_replies(self, accept: ReplyKeyExpr) -> Self {
         let Self {
             session,
             selector,
@@ -318,15 +302,17 @@ impl<'a, 'b, Handler> GetBuilder<'a, 'b, Handler> {
             consolidation,
             destination,
             timeout,
+            value,
             handler,
         } = self;
         Self {
             session,
-            selector: selector.and_then(|s| s.accept_any_keyexpr(value == ReplyKeyExpr::Any)),
+            selector: selector.and_then(|s| s.accept_any_keyexpr(accept == ReplyKeyExpr::Any)),
             target,
             consolidation,
             destination,
             timeout,
+            value,
             handler,
         }
     }
@@ -373,6 +359,7 @@ where
                 self.consolidation,
                 self.destination,
                 self.timeout,
+                self.value,
                 callback,
             )
             .map(|_| receiver)
