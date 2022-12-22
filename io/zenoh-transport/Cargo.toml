@@ -60,7 +60,7 @@ log = "0.4.17"
 paste = "1.0.9"
 rand = "0.8.3"
 ringbuffer-spsc = "0.1.6"
-rsa = { version = "0.6.1", optional = true }
+rsa = { version = "0.7.2", optional = true }
 serde = "1.0.145"
 panic-message = "0.3.0"
 zenoh-buffers = { version = "0.6.0-beta.1", path = "../../commons/zenoh-buffers/" }
