@@ -60,6 +60,6 @@ zenoh-sync = { version = "0.7.0-rc", path = "../zenoh-sync/", optional = true }
 winapi = { version = "0.3.9", features = ["iphlpapi"] }
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2.133"
+libc = "0.2.139"
 pnet = "0.31.0"
 pnet_datalink = "0.31.0"
