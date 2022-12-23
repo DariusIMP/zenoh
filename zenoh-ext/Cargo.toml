@@ -47,7 +47,7 @@ zenoh-sync = { version = "0.7.0-rc", path = "../commons/zenoh-sync" }
 zenoh-util = { version = "0.7.0-rc", path = "../commons/zenoh-util" }
 
 [dev-dependencies]
-clap = "3.2.23"
+clap = "4.0.32"
 
 [[example]]
 name = "z_query_sub"

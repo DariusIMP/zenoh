@@ -577,13 +577,23 @@ version = "3.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71655c45cb9845d3270c9d6df84ebe72b4dad3c2ba3f7023ad47c144e4e473a5"
 dependencies = [
- "atty",
  "bitflags",
- "clap_lex",
+ "clap_lex 0.2.4",
  "indexmap",
+ "textwrap",
+]
+
+[[package]]
+name = "clap"
+version = "4.0.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7db700bc935f9e43e88d00b0850dae18a63773cfbec6d8e070fccf7fef89a39"
+dependencies = [
+ "bitflags",
+ "clap_lex 0.3.0",
+ "is-terminal",
  "strsim",
  "termcolor",
- "textwrap",
 ]
 
 [[package]]
@@ -591,6 +601,15 @@ name = "clap_lex"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
+dependencies = [
+ "os_str_bytes",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d4198f73e42b4936b35b5bb248d81d2b595ecb170da0bac7655c54eedfa8da8"
 dependencies = [
  "os_str_bytes",
 ]
@@ -717,7 +736,7 @@ dependencies = [
  "atty",
  "cast",
  "ciborium",
- "clap",
+ "clap 3.2.23",
  "criterion-plot",
  "itertools",
  "lazy_static",
@@ -3838,7 +3857,7 @@ name = "zenoh-examples"
 version = "0.7.0-rc"
 dependencies = [
  "async-std",
- "clap",
+ "clap 4.0.32",
  "env_logger",
  "flume",
  "futures",
@@ -3857,7 +3876,7 @@ version = "0.7.0-rc"
 dependencies = [
  "async-std",
  "bincode",
- "clap",
+ "clap 4.0.32",
  "env_logger",
  "flume",
  "futures",
@@ -4051,7 +4070,7 @@ dependencies = [
  "anyhow",
  "async-std",
  "base64 0.13.1",
- "clap",
+ "clap 4.0.32",
  "env_logger",
  "flume",
  "futures",
@@ -4076,7 +4095,7 @@ version = "0.7.0-rc"
 dependencies = [
  "async-std",
  "async-trait",
- "clap",
+ "clap 4.0.32",
  "crc",
  "derive-new",
  "env_logger",
@@ -4185,7 +4204,7 @@ name = "zenoh-util"
 version = "0.7.0-rc"
 dependencies = [
  "async-std",
- "clap",
+ "clap 4.0.32",
  "futures",
  "hex",
  "home",
@@ -4223,7 +4242,7 @@ name = "zenohd"
 version = "0.7.0-rc"
 dependencies = [
  "async-std",
- "clap",
+ "clap 4.0.32",
  "env_logger",
  "futures",
  "git-version",
@@ -4246,7 +4265,7 @@ name = "zplugin-example"
 version = "0.7.0-rc"
 dependencies = [
  "async-std",
- "clap",
+ "clap 4.0.32",
  "env_logger",
  "futures",
  "log",
