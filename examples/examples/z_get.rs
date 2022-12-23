@@ -11,7 +11,6 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-use async_std::prelude::FutureExt;
 use clap::{App, Arg};
 use std::convert::TryFrom;
 use std::time::Duration;
@@ -23,20 +22,21 @@ async fn main() {
     // initiate logging
     env_logger::init();
 
-    let (config, selector, target, timeout) = parse_args();
+    let (config, selector, value, target, timeout) = parse_args();
 
     println!("Opening session...");
     let session = zenoh::open(config).res().await.unwrap();
 
     println!("Sending Query '{}'...", selector);
-    let replies = session
-        .get(&selector)
-        .target(target)
-        .res()
-        .timeout(timeout)
-        .await
-        .unwrap_or_else(|_| panic!("Query has timed out after {:?}", timeout))
-        .unwrap();
+    let replies = match value {
+        Some(value) => session.get(&selector).with_value(value),
+        None => session.get(&selector),
+    }
+    .target(target)
+    .timeout(timeout)
+    .res()
+    .await
+    .unwrap();
     while let Ok(reply) = replies.recv_async().await {
         match reply.sample {
             Ok(sample) => println!(
@@ -49,7 +49,7 @@ async fn main() {
     }
 }
 
-fn parse_args() -> (Config, String, QueryTarget, Duration) {
+fn parse_args() -> (Config, String, Option<String>, QueryTarget, Duration) {
     let args = App::new("zenoh query example")
         .arg(
             Arg::from_usage("-m, --mode=[MODE]  'The zenoh session mode (peer by default).")
@@ -65,6 +65,9 @@ fn parse_args() -> (Config, String, QueryTarget, Duration) {
             Arg::from_usage("-s, --selector=[SELECTOR] 'The selection of resources to query'")
                 .default_value("demo/example/**"),
         )
+        .arg(Arg::from_usage(
+            "-v, --value=[VALUE]      'An optional value to put in the query.'",
+        ))
         .arg(
             Arg::from_usage("-t, --target=[TARGET] 'The target queryables of the query'")
                 .possible_values(["BEST_MATCHING", "ALL", "ALL_COMPLETE"])
@@ -108,6 +111,8 @@ fn parse_args() -> (Config, String, QueryTarget, Duration) {
 
     let selector = args.value_of("selector").unwrap().to_string();
 
+    let value = args.value_of("value").map(ToOwned::to_owned);
+
     let target = match args.value_of("target") {
         Some("BEST_MATCHING") => QueryTarget::BestMatching,
         Some("ALL") => QueryTarget::All,
@@ -117,5 +122,5 @@ fn parse_args() -> (Config, String, QueryTarget, Duration) {
 
     let timeout = Duration::from_millis(args.value_of("timeout").unwrap().parse::<u64>().unwrap());
 
-    (config, selector, target, timeout)
+    (config, selector, value, target, timeout)
 }
