@@ -38,7 +38,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 async-std = "=1.12.0"
-async-trait = "0.1.59"
+async-trait = "0.1.61"
 clap = "3.2.23"
 crc = "3.0.0"
 derive-new = "0.5.9"
