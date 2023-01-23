@@ -3731,9 +3731,9 @@ dependencies = [
 
 [[package]]
 name = "z-serial"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7aeb1171fec219009470121feb6eca34ddf6ab140041180b5d174cac99fcb650"
+checksum = "a74ab200b318928231fa62809ca06397f2790d29ffb58d9cbbc7d517e93a6b17"
 dependencies = [
  "cobs",
  "futures",
