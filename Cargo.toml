@@ -114,7 +114,7 @@ regex = "1.7.0"
 ringbuffer-spsc = "0.1.8"
 rsa = "0.7.2"
 rustc_version = "0.4.0"
-rustls = "0.20.6"
+rustls = "0.20.8"
 rustls-native-certs = "0.6.2"
 rustls-pemfile = "1.0.1"
 serde = { version = "1.0.152", features = ["derive"] }
