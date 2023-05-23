@@ -1,0 +1,50 @@
+/// This file attempts to list and document available configuration elements.
+/// For a more complete view of the configuration's structure, check out `zenoh/src/config.rs`'s `Config` structure.
+/// Note that the values here are correctly typed, but may not be sensible, so copying this file to change only the parts that matter to you is not good practice.
+{
+  // /// The node's mode (router, peer or client)
+  // mode: "peer",
+
+  // /// Which endpoints to connect to. E.g. tcp/localhost:7447.
+  // /// By configuring the endpoints, it is possible to tell zenoh which router/peer to connect to at startup.
+  // connect: {
+  //   endpoints: [
+  //     // "<proto>/<address>"
+  //   ],
+  // },
+
+  // /// Which endpoints to listen on. E.g. tcp/localhost:7447.
+  // /// By configuring the endpoints, it is possible to tell zenoh which are the endpoints that other routers,
+  // /// peers, or client can use to establish a zenoh session.
+  // listen: {
+  //   endpoints: [
+  //     // "<proto>/<address>"
+  //   ],
+  // },
+
+  // /// Configure the scouting mechanisms and their behaviours
+  // scouting: {
+  //   /// The multicast scouting configuration.
+  //   multicast: {
+  //     /// Whether multicast scouting is enabled or not
+  //     enabled: false,
+  //   },
+  //   gossip: {
+  //     /// Whether gossip scouting is enabled or not
+  //     enabled: false,
+  //   },
+  // },
+
+  /// Configure internal transport parameters
+  transport: {
+    link: {
+      compression: {
+        /// When is_enabled is true, batches will be sent compressed. It does not affect the
+        /// reception, which always expects compressed batches when built with the feature
+        /// "transport_compression".
+        enabled: true,
+        // enabled: false,
+      },
+    },
+  },
+}

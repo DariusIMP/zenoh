@@ -508,6 +508,7 @@ fn tx_compressed(
             );
             return Ok(set_uncompressed_batch_header(bytes, buff, is_streamed)?);
         }
+        println!("{} bytes", batch_size);
         Ok(batch_size)
     } else {
         Ok(set_uncompressed_batch_header(bytes, buff, is_streamed)?)
