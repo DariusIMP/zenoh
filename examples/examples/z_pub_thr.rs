@@ -23,7 +23,6 @@ fn main() {
     let (config, size, prio, print, number, high_entropy) = parse_args();
 
     let data: Value = if high_entropy {
-        println!("High entropy");
         (0usize..size)
             .map(|_| rand::random::<u8>())
             .collect::<Vec<u8>>()
