@@ -305,7 +305,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download result of previous builds
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           path: ARTIFACTS
       - name: Publish as github release
@@ -389,7 +389,7 @@ jobs:
         shell: bash
         run: git fetch --tags --force
       - name: Download packages from previous job
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           path: PACKAGES
       - name: Unzip PACKAGES
